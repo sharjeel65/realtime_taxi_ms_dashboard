@@ -9,7 +9,6 @@ def consume_data():
     # Subscribe to topic
     topic = "taxi_1"
     consumer.subscribe([topic])
-
     try:
         # Consume messages from Kafka topic
         while True:
@@ -37,3 +36,4 @@ def consume_data():
 
 if __name__ == "__main__":
     consume_data()
+

@@ -7,3 +7,4 @@ if __name__ == "__main__":
     print("consumr started")
     # Consume data from Kafka topic
     consume_data()
+
