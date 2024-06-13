@@ -15,7 +15,7 @@ def delivery_report(err, msg):
         logger.info(f"Message delivered to {msg.topic()} [{msg.partition()}]")
 
 
-def produce_taxi_data(file_path, batch_size=1, sleep_time=1):
+def produce_taxi_data(file_path='', batch_size=1, sleep_time=1):
     # Configure Kafka producer
     conf = {
         'bootstrap.servers': "localhost:9092",
@@ -33,12 +33,10 @@ def produce_taxi_data(file_path, batch_size=1, sleep_time=1):
         with open(file_path, "r") as file:
             logger.info(f"Reading data from {file_path}")
             lines = file.readlines()
-            print(len(lines))
             # Loop continuously, reading and sending data in batches
             while True:
                 for i in range(0, len(lines), batch_size):
                     batch = lines[i:i + batch_size]
-                    print(len(batch))
                     for line in batch:
                         producer.produce(topic, line.encode('utf-8'), callback=delivery_report)
 
@@ -61,4 +59,4 @@ def produce_taxi_data(file_path, batch_size=1, sleep_time=1):
 
 
 if __name__ == "__main__":
-    produce_taxi_data("all_sorted_data.csv")
+    produce_taxi_data("all_sorted_data.csv", 10, 1)

@@ -1,53 +1,103 @@
-from confluent_kafka import Consumer, KafkaError, KafkaException
-import logging
+from abc import ABC
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("TaxiDataConsumer")
+from pyflink.datastream import TimeCharacteristic
+from pyflink.common.typeinfo import Types
+from pyflink.datastream.functions import ProcessFunction, KeySelector, KeyedProcessFunction
+from elasticsearch import Elasticsearch
+from datetime import datetime, timedelta
+
+from pyflink.datastream.state import ValueStateDescriptor
+
+from pyflink.datastream.connectors.kafka import KafkaSource, KafkaOffsetsInitializer, FlinkKafkaConsumer
+from pyflink.datastream.stream_execution_environment import StreamExecutionEnvironment
+from pyflink.common import SimpleStringSchema, WatermarkStrategy
 
 
-def consume_data(topic, group_id="my_consumer_group", bootstrap_servers="localhost:9092", timeout=1.0):
-    # Configure Kafka consumer
-    conf = {
+class TaxiKeySelector(KeySelector):
+    def get_key(self, value):
+        fields = value.split(',')
+        return fields[0]  # taxi_id
+
+
+# class SimpleKeyedProcessFunction(KeyedProcessFunction):
+#     def process_element(self, value, ctx):
+#         # Print the incoming string
+#         print(value)
+#         # No output to collector in this simple example
+
+
+class ProcessTaxiData(KeyedProcessFunction):
+    def process_element(self, value, ctx):
+        if not hasattr(self, 'es_client'):
+            self.es_client = Elasticsearch(['http://localhost:9200'])
+
+        fields = value.split(',')
+        try:
+            if len(fields) == 4:
+                taxi_id = fields[0]
+                timestamp_str = fields[1]
+                longitude = float(fields[2])
+                latitude = float(fields[3])
+
+                # Convert timestamp to datetime object
+                timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+
+                # Create document to index in Elasticsearch
+                document = {
+                    'taxi_id': taxi_id,
+                    'timestamp': timestamp,
+                    'location': {
+                        'longitude': longitude,
+                        'latitude': latitude
+                    }
+                }
+                # Index document into Elasticsearch
+                self.es_client.index(index='flink-index', body=document)
+                print("streamed")
+
+        except (ValueError, Exception) as e:
+            print(f"Error processing message: {value}, Error: {e}")
+
+
+def kafka_to_elasticsearch(topic, group_id="my_consumer_group", bootstrap_servers="localhost:9092"):
+    env = StreamExecutionEnvironment.get_execution_environment()
+    env.set_parallelism(1)
+    # C:\Users\sharj\PycharmProjects\bd24_project_a6_b\flink - connector - kafka - 3.2
+    # .0 - 1.19.jar
+    env.add_jars("file:///Users/sharj/PycharmProjects/bd24_project_a6_b/flink-connector-kafka-3.2.0-1.19.jar",
+                 "file:///Users/sharj/PycharmProjects/bd24_project_a6_b/kafka-clients-3.7.0.jar")
+    env.set_stream_time_characteristic(TimeCharacteristic.EventTime)
+    # Create an Elasticsearch client
+    es = Elasticsearch(['http://localhost:9200'])
+
+    # Define Kafka properties
+    kafka_properties = {
         'bootstrap.servers': bootstrap_servers,
         'group.id': group_id,
+        'key.deserializer': 'org.apache.kafka.common.serialization.StringDeserializer',
+        'value.deserializer': 'org.apache.kafka.common.serialization.StringDeserializer'
     }
-    consumer = Consumer(conf)
 
-    # Subscribe to topic
-    consumer.subscribe([topic])
-    logger.info(f"Subscribed to topic: {topic}")
+    # Create a FlinkKafkaConsumer
+    kafka_consumer = FlinkKafkaConsumer(
+        topic,
+        SimpleStringSchema(),
+        properties=kafka_properties
+    )
 
-    try:
-        # Consume messages from Kafka topic
-        while True:
-            msg = consumer.poll(timeout=timeout)
-            if msg is None:
-                print("continue")
-                continue
+    # Add the Kafka source to the environment
+    stream = env.add_source(kafka_consumer)
 
-            if msg.error():
-                if msg.error().code() == KafkaError._PARTITION_EOF:
-                    # End of partition event
-                    logger.info(f"Reached end of partition: {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
-                    continue
-                else:
-                    # Handle other errors
-                    logger.error(f"Consumer error: {msg.error()}")
-                    continue
+    # # Define the processing logic
+    stream.key_by(TaxiKeySelector()) \
+        .process(ProcessTaxiData(), output_type=None)
+    # Apply KeyedProcessFunction
+    # stream.key_by(lambda x: x) \
+    #     .process(SimpleKeyedProcessFunction(), output_type=Types.STRING())
 
-            # Process the message
-            logger.info(f"Received message: {msg.value().decode('utf-8')}")
-
-    except KafkaException as e:
-        logger.error(f"Kafka error: {e}")
-    except Exception as e:
-        logger.error(f"Error consuming messages: {e}")
-    finally:
-        # Close consumer
-        consumer.close()
-        logger.info("Consumer closed.")
+    # Execute the Flink job
+    env.execute('Flink Kafka to Elasticsearch')
 
 
 if __name__ == "__main__":
-    consume_data(topic="taxi_1")
+    kafka_to_elasticsearch("taxi_1", "my_consumer_group", "localhost:9092")
