@@ -1,66 +1,64 @@
-# from confluent_kafka import Producer
-#
-#
-# # bin/zookeeper-server-start.sh config/zookeeper.properties
-# # .\bin\windows\zookeeper-server-start.bat .\config\zookeeper.properties
-# # .\bin\windows\kafka - topics.bat - -create - -zookeeper localhost: 2181 - -replication - factor 1 - -partitions 1 - -topic taxi_1
-# # .\bin\windows\kafka-topics.bat --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic taxi_1
-# .\bin\windows\kafka-server-start.bat .\config\server.properties
-# def produce_data_batch(batch_size=100):
-#     # Configure Kafka producer
-#     conf = {'bootstrap.servers': "localhost:9092"}
-#     producer = Producer(**conf)
-#
-#     # Define topic
-#     topic = "taxi_1"
-#
-#     # Read data from source and produce it to Kafka topic in batches
-#     with open("taxi1.txt", "r") as file:
-#         print("here")
-#         lines = file.readlines()
-#         for i in range(0, len(lines), batch_size):
-#             print("here 3")
-#             batch = lines[i:i + batch_size]
-#             for line in batch:
-#                 producer.produce(topic, line.encode('utf-8'))
-#
-#             # Wait for all messages in the batch to be delivered
-#             producer.flush()
-#
-#     # Wait for all messages to be delivered
-#     producer.flush()
-#
-#
-# if __name__ == "__main__":
-#     produce_data_batch()
-
 from confluent_kafka import Producer
+from time import sleep
+import logging
 
-def produce_taxi_data(taxi_file, batch_size=100):
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("TaxiDataProducer")
+
+
+def delivery_report(err, msg):
+    """Delivery report callback called once for each message produced."""
+    if err is not None:
+        logger.error(f"Delivery failed for message {msg.key()}: {err}")
+    else:
+        logger.info(f"Message delivered to {msg.topic()} [{msg.partition()}]")
+
+
+def produce_taxi_data(file_path, batch_size=1, sleep_time=1):
     # Configure Kafka producer
-    conf = {'bootstrap.servers': "localhost:9092"}
+    conf = {
+        'bootstrap.servers': "localhost:9092",
+        'client.id': 'taxi-producer',
+        'linger.ms': 10,
+        'batch.num.messages': batch_size
+    }
     producer = Producer(**conf)
 
     # Define topic
-    topic = "taxi_trajectory"
+    topic = "taxi_1"
+    logger.info("Producer started")
 
-    # Read data from the taxi file and produce it to Kafka topic in batches
-    with open(taxi_file, "r") as file:
-        lines = file.readlines()
-        for i in range(0, len(lines), batch_size):
-            batch = lines[i:i + batch_size]
-            for line in batch:
-                producer.produce(topic, line.encode('utf-8'))
+    try:
+        with open(file_path, "r") as file:
+            logger.info(f"Reading data from {file_path}")
+            lines = file.readlines()
+            print(len(lines))
+            # Loop continuously, reading and sending data in batches
+            while True:
+                for i in range(0, len(lines), batch_size):
+                    batch = lines[i:i + batch_size]
+                    print(len(batch))
+                    for line in batch:
+                        producer.produce(topic, line.encode('utf-8'), callback=delivery_report)
 
-            # Wait for all messages in the batch to be delivered
-            producer.flush()
+                    # Wait for delivery confirmations (optional)
+                    producer.poll(0)  # Serve delivery callback queue
+                    producer.flush()  # Ensure all messages are sent before sleeping
 
-    # Wait for all messages to be delivered
-    producer.flush()
+                    logger.info(f"Produced and flushed batch of {len(batch)} records")
+
+                # Sleep before the next iteration
+                logger.info(f"Sleeping for {sleep_time} seconds before next iteration")
+                sleep(sleep_time)
+
+    except Exception as e:
+        logger.error(f"Error producing taxi data: {e}")
+    finally:
+        # Ensure all remaining messages are delivered before exiting
+        producer.flush()
+        logger.info("Producer ended")
+
 
 if __name__ == "__main__":
-    produce_taxi_data()
-
-
-
-
+    produce_taxi_data("all_sorted_data.csv")
