@@ -1,13 +1,7 @@
-from abc import ABC
-
 from pyflink.datastream import TimeCharacteristic
-from pyflink.common.typeinfo import Types
 from pyflink.datastream.functions import ProcessFunction, KeySelector, KeyedProcessFunction
 from elasticsearch import Elasticsearch
 from datetime import datetime, timedelta
-
-from pyflink.datastream.state import ValueStateDescriptor
-
 from pyflink.datastream.connectors.kafka import KafkaSource, KafkaOffsetsInitializer, FlinkKafkaConsumer
 from pyflink.datastream.stream_execution_environment import StreamExecutionEnvironment
 from pyflink.common import SimpleStringSchema, WatermarkStrategy
@@ -30,7 +24,18 @@ class ProcessTaxiData(KeyedProcessFunction):
     def process_element(self, value, ctx):
         if not hasattr(self, 'es_client'):
             self.es_client = Elasticsearch(['http://localhost:9200'])
-
+            mapping = {
+                "mappings": {
+                    "properties": {
+                        "taxi_id": {"type": "keyword"},
+                        "timestamp": {"type": "date"},
+                        "location": {
+                            "type": "geo_point"
+                        }
+                    }
+                }
+            }
+            self.es_client.indices.create(index="taxi_index", body=mapping, ignore=400)
         fields = value.split(',')
         try:
             if len(fields) == 4:
@@ -47,12 +52,12 @@ class ProcessTaxiData(KeyedProcessFunction):
                     'taxi_id': taxi_id,
                     'timestamp': timestamp,
                     'location': {
-                        'longitude': longitude,
-                        'latitude': latitude
+                        'lat': latitude,
+                        'lon': longitude
                     }
                 }
                 # Index document into Elasticsearch
-                self.es_client.index(index='flink-index', body=document)
+                self.es_client.index(index='taxi_index', body=document)
                 print("streamed")
 
         except (ValueError, Exception) as e:
@@ -62,6 +67,8 @@ class ProcessTaxiData(KeyedProcessFunction):
 def kafka_to_elasticsearch(topic, group_id="my_consumer_group", bootstrap_servers="localhost:9092"):
     env = StreamExecutionEnvironment.get_execution_environment()
     env.set_parallelism(1)
+    # C:\Users\sharj\PycharmProjects\bd24_project_a6_b\flink - connector - kafka - 3.2
+    # .0 - 1.19.jar
     # C:\Users\sharj\PycharmProjects\bd24_project_a6_b\flink - connector - kafka - 3.2
     # .0 - 1.19.jar
     env.add_jars("file:///Users/sharj/PycharmProjects/bd24_project_a6_b/flink-connector-kafka-3.2.0-1.19.jar",
