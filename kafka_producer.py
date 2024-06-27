@@ -42,7 +42,7 @@ def produce_taxi_data(file_path='', batch_size=1, sleep_time=1):
 
                     # Wait for delivery confirmations (optional)
                     producer.poll(20)  # Serve delivery callback queue
-                    producer.flush()  # Ensure all messages are sent before sleeping
+                    # producer.flush()  # Ensure all messages are sent before sleeping
 
                     logger.info(f"Produced and flushed batch of {len(batch)} records")
 
