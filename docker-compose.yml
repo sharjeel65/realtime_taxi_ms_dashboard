@@ -26,6 +26,7 @@ services:
     volumes:
       - kafka-data:/var/lib/kafka/data
 
+
   kafka_producer:
     build: .
     depends_on:
