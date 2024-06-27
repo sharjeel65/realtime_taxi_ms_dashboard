@@ -26,7 +26,7 @@ def produce_taxi_data(file_path='', batch_size=1, sleep_time=1):
     producer = Producer(**conf)
 
     # Define topic
-    topic = "taxi_1"
+    topic = "taxi_4"
     logger.info("Producer started")
 
     try:
