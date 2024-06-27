@@ -19,7 +19,6 @@ class TaxiKeySelector(KeySelector):
 #         print(value)
 #         # No output to collector in this simple example
 
-
 class ProcessTaxiData(KeyedProcessFunction):
     def process_element(self, value, ctx):
         if not hasattr(self, 'es_client'):
@@ -64,7 +63,7 @@ class ProcessTaxiData(KeyedProcessFunction):
             print(f"Error processing message: {value}, Error: {e}")
 
 
-def kafka_to_elasticsearch(topic, group_id="my_consumer_group", bootstrap_servers="localhost:9092"):
+def kafka_to_elasticsearch(topic, group_id="my_consumer_group", bootstrap_servers="localhost:9094"):
     env = StreamExecutionEnvironment.get_execution_environment()
     env.set_parallelism(1)
     # C:\Users\sharj\PycharmProjects\bd24_project_a6_b\flink - connector - kafka - 3.2
@@ -107,4 +106,4 @@ def kafka_to_elasticsearch(topic, group_id="my_consumer_group", bootstrap_server
 
 
 if __name__ == "__main__":
-    kafka_to_elasticsearch("taxi_1", "my_consumer_group", "localhost:9092")
+    kafka_to_elasticsearch("taxi", "my_consumer_group", "localhost:9094")
