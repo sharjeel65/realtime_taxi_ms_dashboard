@@ -4,7 +4,7 @@ from elasticsearch import Elasticsearch
 from datetime import datetime, timedelta
 from pyflink.datastream.connectors.kafka import KafkaSource, KafkaOffsetsInitializer, FlinkKafkaConsumer
 from pyflink.datastream.stream_execution_environment import StreamExecutionEnvironment
-from pyflink.common import SimpleStringSchema, WatermarkStrategy
+from pyflink.common import SimpleStringSchema, WatermarkStrategy, Types
 
 
 class TaxiKeySelector(KeySelector):
@@ -18,7 +18,6 @@ class TaxiKeySelector(KeySelector):
 #         # Print the incoming string
 #         print(value)
 #         # No output to collector in this simple example
-
 
 class ProcessTaxiData(KeyedProcessFunction):
     def process_element(self, value, ctx):
@@ -64,7 +63,7 @@ class ProcessTaxiData(KeyedProcessFunction):
             print(f"Error processing message: {value}, Error: {e}")
 
 
-def kafka_to_elasticsearch(topic, group_id="my_consumer_group", bootstrap_servers="localhost:9092"):
+def kafka_to_elasticsearch(topic, group_id="my_consumer_group", bootstrap_servers="localhost:9094"):
     env = StreamExecutionEnvironment.get_execution_environment()
     env.set_parallelism(1)
     # C:\Users\sharj\PycharmProjects\bd24_project_a6_b\flink - connector - kafka - 3.2
@@ -97,7 +96,7 @@ def kafka_to_elasticsearch(topic, group_id="my_consumer_group", bootstrap_server
 
     # # Define the processing logic
     stream.key_by(TaxiKeySelector()) \
-        .process(ProcessTaxiData(), output_type=None)
+        .process(ProcessTaxiData(), output_type=Types.STRING())
     # Apply KeyedProcessFunction
     # stream.key_by(lambda x: x) \
     #     .process(SimpleKeyedProcessFunction(), output_type=Types.STRING())
@@ -107,4 +106,4 @@ def kafka_to_elasticsearch(topic, group_id="my_consumer_group", bootstrap_server
 
 
 if __name__ == "__main__":
-    kafka_to_elasticsearch("taxi_4", "my_consumer_group", "localhost:9092")
+    kafka_to_elasticsearch("taxi", "my_consumer_group", "localhost:9094")

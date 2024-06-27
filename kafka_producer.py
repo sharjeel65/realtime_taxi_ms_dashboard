@@ -18,15 +18,15 @@ def delivery_report(err, msg):
 def produce_taxi_data(file_path='', batch_size=1, sleep_time=1):
     # Configure Kafka producer
     conf = {
-        'bootstrap.servers': "localhost:9092",
-        'client.id': 'taxi-producer',
+        'bootstrap.servers': "localhost:9094",
+        'client.id': 'taxi',
         'linger.ms': 10,
         'batch.num.messages': batch_size
     }
     producer = Producer(**conf)
 
     # Define topic
-    topic = "taxi_4"
+    topic = "taxi"
     logger.info("Producer started")
 
     try:
