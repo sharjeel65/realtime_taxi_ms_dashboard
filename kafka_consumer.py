@@ -107,4 +107,4 @@ def kafka_to_elasticsearch(topic, group_id="my_consumer_group", bootstrap_server
 
 
 if __name__ == "__main__":
-    kafka_to_elasticsearch("taxi_1", "my_consumer_group", "localhost:9092")
+    kafka_to_elasticsearch("taxi_4", "my_consumer_group", "localhost:9092")
