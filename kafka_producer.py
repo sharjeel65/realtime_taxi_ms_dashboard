@@ -18,15 +18,15 @@ def delivery_report(err, msg):
 def produce_taxi_data(file_path='', batch_size=1, sleep_time=1):
     # Configure Kafka producer
     conf = {
-        'bootstrap.servers': "localhost:9092",
-        'client.id': 'taxi-producer',
+        'bootstrap.servers': "localhost:9094",
+        'client.id': 'taxi',
         'linger.ms': 10,
         'batch.num.messages': batch_size
     }
     producer = Producer(**conf)
 
     # Define topic
-    topic = "taxi_1"
+    topic = "taxi"
     logger.info("Producer started")
 
     try:
@@ -41,7 +41,7 @@ def produce_taxi_data(file_path='', batch_size=1, sleep_time=1):
                         producer.produce(topic, line.encode('utf-8'), callback=delivery_report)
 
                     # Wait for delivery confirmations (optional)
-                    producer.poll(0)  # Serve delivery callback queue
+                    producer.poll(20)  # Serve delivery callback queue
                     producer.flush()  # Ensure all messages are sent before sleeping
 
                     logger.info(f"Produced and flushed batch of {len(batch)} records")
