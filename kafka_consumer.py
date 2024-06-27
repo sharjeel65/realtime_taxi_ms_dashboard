@@ -4,7 +4,7 @@ from elasticsearch import Elasticsearch
 from datetime import datetime, timedelta
 from pyflink.datastream.connectors.kafka import KafkaSource, KafkaOffsetsInitializer, FlinkKafkaConsumer
 from pyflink.datastream.stream_execution_environment import StreamExecutionEnvironment
-from pyflink.common import SimpleStringSchema, WatermarkStrategy
+from pyflink.common import SimpleStringSchema, WatermarkStrategy, Types
 
 
 class TaxiKeySelector(KeySelector):
@@ -96,7 +96,7 @@ def kafka_to_elasticsearch(topic, group_id="my_consumer_group", bootstrap_server
 
     # # Define the processing logic
     stream.key_by(TaxiKeySelector()) \
-        .process(ProcessTaxiData(), output_type=None)
+        .process(ProcessTaxiData(), output_type=Types.STRING())
     # Apply KeyedProcessFunction
     # stream.key_by(lambda x: x) \
     #     .process(SimpleKeyedProcessFunction(), output_type=Types.STRING())
