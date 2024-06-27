@@ -7,7 +7,7 @@ def consume_data():
     consumer = Consumer(conf)
 
     # Subscribe to topic
-    topic = "taxi_1"
+    topic = "taxi_3"
     consumer.subscribe([topic])
 
     try:
@@ -17,7 +17,7 @@ def consume_data():
             if msg is None:
                 continue
             if msg.error():
-                if msg.error().code() == KafkaError.PARTITION_EOF:
+                if msg.error().code() == KafkaError._PARTITION_EOF:
                     # End of partition
                     continue
                 else:

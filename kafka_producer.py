@@ -12,14 +12,14 @@ def produce_data_batch(batch_size=100):
     producer = Producer(**conf)
 
     # Define topic
-    topic = "all_sorted_data.csv"
+    topic = "taxi_3"
 
     # Read data from source and produce it to Kafka topic in batches
-    with open("all_sorted_data.csv", "r") as file:
+    with open("taxi1.txt", "r") as file:
         print("here")
         lines = file.readlines()
         for i in range(0, len(lines), batch_size):
-            print("here 3")
+            print("read")
             batch = lines[i:i + batch_size]
             for line in batch:
                 producer.produce(topic, line.encode('utf-8'))
