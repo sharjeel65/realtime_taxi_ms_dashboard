@@ -10,7 +10,7 @@ logger = logging.getLogger("Main")
 
 def main():
     # Kafka configuration parameters
-    kafka_topic = "taxi_1"
+    kafka_topic = "taxi"
     csv_file_path = "all_sorted_data.csv"
     bootstrap_servers = "localhost:9092"
     consumer_group_id = "my_consumer_group"
