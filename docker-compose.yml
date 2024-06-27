@@ -69,6 +69,7 @@ services:
       - kafka
       - elasticsearch
 
+
   kafka_producer:
     build: .
     depends_on:
