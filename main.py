@@ -1,5 +1,5 @@
 from kafka_producer import produce_taxi_data
-from kafka_consumer import consume_data
+from kafka_consumer import kafka_to_elasticsearch
 from threading import Thread
 import logging
 
@@ -21,8 +21,8 @@ def main():
     # Producer thread
     producer_thread = Thread(target=produce_taxi_data, args=(csv_file_path, batch_size, sleep_time))
     # Consumer thread
-    consumer_thread = Thread(target=consume_data,
-                             args=(kafka_topic, consumer_group_id, bootstrap_servers, poll_timeout))
+    consumer_thread = Thread(target=kafka_to_elasticsearch,
+                             args=(kafka_topic, consumer_group_id, bootstrap_servers))
 
     logger.info("Starting producer and consumer threads")
     producer_thread.start()
