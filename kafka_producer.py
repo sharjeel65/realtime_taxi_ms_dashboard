@@ -41,8 +41,8 @@ def produce_taxi_data(file_path='', batch_size=1, sleep_time=1):
                         producer.produce(topic, line.encode('utf-8'), callback=delivery_report)
 
                     # Wait for delivery confirmations (optional)
-                    producer.poll(20)  # Serve delivery callback queue
-                    # producer.flush()  # Ensure all messages are sent before sleeping
+                    producer.poll(0)  # Serve delivery callback queue
+                    producer.flush()  # Ensure all messages are sent before sleeping
 
                     logger.info(f"Produced and flushed batch of {len(batch)} records")
 

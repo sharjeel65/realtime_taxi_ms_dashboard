@@ -21,3 +21,18 @@
 * create virtual environment 
 * install the required packages
 * run the project
+
+#####DOCKERS##
+* Run Dockers app
+* run command : docker-compose up --build
+
+ if this is the error: Error response from daemon: Ports are not available: exposing port TCP 0.0.0.0:2181 -> 0.0.0.0:0: listen tcp 0.0.0.0:2181: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+Then: 
+*run: netstat -ano | findstr :2181
+run: taskkill /PID portnumber /F
+run: netstat -ano | findstr :2181
+docker-compose down
+docker system prune -a --volumes
+docker-compose up -d --build
+
+
