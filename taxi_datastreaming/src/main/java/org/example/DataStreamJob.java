@@ -49,13 +49,13 @@ public class DataStreamJob {
 
 		DataStream<String> rawTaxiDataStream = env.addSource(consumer);
 
-		DataStream<TaxiData> taxiDataStream = rawTaxiDataStream.map((MapFunction<String, TaxiData>) value -> {
+		DataStream<Transaction> taxiDataStream = rawTaxiDataStream.map((MapFunction<String, Transaction>) value -> {
 			String[] fields = value.split(",");
-			TaxiData taxiData = new TaxiData();
-			taxiData.setTaxiId(fields[0]);
+			Transaction taxiData = new Transaction();
+			taxiData.setTaxiID(fields[0]);
 			taxiData.setTimestamp(Timestamp.valueOf(fields[1]));
-			taxiData.setLatitude(Double.parseDouble(fields[2]));
-			taxiData.setLongitude(Double.parseDouble(fields[3]));
+			taxiData.setLongitude(Double.parseDouble(fields[2]));
+			taxiData.setLatitude(Double.parseDouble(fields[3]));
 			taxiData.setStarting(Boolean.parseBoolean(fields[4]));
 			taxiData.setEnding(Boolean.parseBoolean(fields[5]));
 			return taxiData;
@@ -81,13 +81,13 @@ public class DataStreamJob {
 				"CREATE TABLE IF NOT EXISTS taxi_data (" +
 						"taxi_id VARCHAR(255), " +
 						"timestamp TIMESTAMP, " +
-						"latitude DOUBLE PRECISION, " +
 						"longitude DOUBLE PRECISION, " +
+						"latitude DOUBLE PRECISION, " +
 						"is_starting BOOLEAN, " +
 						"is_ending BOOLEAN, " +
 						"PRIMARY KEY (taxi_id, timestamp)" +
 						")",
-				(JdbcStatementBuilder<TaxiData>) (preparedStatement, taxiData) -> {
+				(JdbcStatementBuilder<Transaction>) (preparedStatement, taxiData) -> {
 				},
 				execOptions,
 				connOptions
@@ -98,17 +98,17 @@ public class DataStreamJob {
 				"INSERT INTO taxi_data(taxi_id, timestamp, latitude, longitude, is_starting, is_ending) " +
 						"VALUES (?, ?, ?, ?, ?, ?) " +
 						"ON CONFLICT (taxi_id, timestamp) DO UPDATE SET " +
-						"latitude = EXCLUDED.latitude, " +
 						"longitude = EXCLUDED.longitude, " +
+						"latitude = EXCLUDED.latitude, " +
 						"is_starting = EXCLUDED.is_starting, " +
 						"is_ending = EXCLUDED.is_ending " +
 						"WHERE taxi_data.taxi_id = EXCLUDED.taxi_id " +
 						"AND taxi_data.timestamp = EXCLUDED.timestamp",
-				(JdbcStatementBuilder<TaxiData>) (preparedStatement, taxiData) -> {
-					preparedStatement.setString(1, taxiData.getTaxiId());
+				(JdbcStatementBuilder<Transaction>) (preparedStatement, taxiData) -> {
+					preparedStatement.setString(1, taxiData.getTaxiID());
 					preparedStatement.setTimestamp(2, taxiData.getTimestamp());
-					preparedStatement.setDouble(3, taxiData.getLatitude());
-					preparedStatement.setDouble(4, taxiData.getLongitude());
+					preparedStatement.setDouble(3, taxiData.getLongitude());
+					preparedStatement.setDouble(4, taxiData.getLatitude());
 					preparedStatement.setBoolean(5, taxiData.isStarting());
 					preparedStatement.setBoolean(6, taxiData.isEnding());
 				},
@@ -118,7 +118,7 @@ public class DataStreamJob {
 
 		// Calculate average speed and distance, then insert into database
 		DataStream<AverageSpeedDistance> avgSpeedDistanceStream = taxiDataStream
-				.keyBy(TaxiData::getTaxiId)
+				.keyBy(Transaction::getTaxiID)
 				.process(new SpeedDistanceCalculator());
 
 		avgSpeedDistanceStream.addSink(JdbcSink.sink(
@@ -129,7 +129,7 @@ public class DataStreamJob {
 						"average_speed = EXCLUDED.average_speed " +
 						"WHERE average_speed_distance.taxi_id = EXCLUDED.taxi_id",
 				(JdbcStatementBuilder<AverageSpeedDistance>) (preparedStatement, avgSpeedDistance) -> {
-					preparedStatement.setString(1, avgSpeedDistance.getTaxiId());
+					preparedStatement.setString(1, avgSpeedDistance.getTaxiID());
 					preparedStatement.setDouble(2, avgSpeedDistance.getTripDistance());
 					preparedStatement.setDouble(3, avgSpeedDistance.getAverageSpeed());
 				},
@@ -143,11 +143,11 @@ public class DataStreamJob {
 						.setHosts(new HttpHost("localhost", 9200, "http"))
 						.setEmitter((avgSpeedDistance, runtimeContext, requestIndexer) -> {
 							String json = String.format("{\"taxiId\":\"%s\",\"tripDistance\":%.2f,\"averageSpeed\":%.2f}",
-									avgSpeedDistance.getTaxiId(), avgSpeedDistance.getTripDistance(), avgSpeedDistance.getAverageSpeed());
+									avgSpeedDistance.getTaxiID(), avgSpeedDistance.getTripDistance(), avgSpeedDistance.getAverageSpeed());
 
 							IndexRequest indexRequest = Requests.indexRequest()
 									.index("average_speed_distance")
-									.id(avgSpeedDistance.getTaxiId())
+									.id(avgSpeedDistance.getTaxiID())
 									.source(json, XContentType.JSON);
 							requestIndexer.add(indexRequest);
 						})

@@ -10,16 +10,16 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SpeedDistanceCalculator extends KeyedProcessFunction<String, TaxiData, AverageSpeedDistance> {
+public class SpeedDistanceCalculator extends KeyedProcessFunction<String, Transaction, AverageSpeedDistance> {
 
-    private final Map<String, TaxiData> tripStartData = new HashMap<>();
+    private final Map<String, Transaction> tripStartData = new HashMap<>();
 
     @Override
-    public void processElement(TaxiData taxiData, Context context, Collector<AverageSpeedDistance> collector) throws Exception {
+    public void processElement(Transaction taxiData, Context context, Collector<AverageSpeedDistance> collector) throws Exception {
         if (taxiData.isStarting()) {
-            tripStartData.put(taxiData.getTaxiId(), taxiData);
+            tripStartData.put(taxiData.getTaxiID(), taxiData);
         } else if (taxiData.isEnding()) {
-            TaxiData startData = tripStartData.remove(taxiData.getTaxiId());
+            Transaction startData = tripStartData.remove(taxiData.getTaxiID());
             if (startData != null) {
                 double distance = calculateDistance(startData.getLatitude(), startData.getLongitude(), taxiData.getLatitude(), taxiData.getLongitude());
                 long durationMillis = Duration.between(startData.getTimestamp().toLocalDateTime(), taxiData.getTimestamp().toLocalDateTime()).toMillis();
